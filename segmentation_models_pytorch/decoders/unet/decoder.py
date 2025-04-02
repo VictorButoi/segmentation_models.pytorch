@@ -51,9 +51,7 @@ class UnetDecoderBlock(nn.Module):
             size=(target_height, target_width),
             mode=self.interpolation_mode,
         )
-        print("I hit here!!")
         if skip_connection is not None:
-            print("SHOULD NOT HIT HERE")
             feature_map = torch.cat([feature_map, skip_connection], dim=1)
             feature_map = self.attention1(feature_map)
         feature_map = self.conv1(feature_map)
@@ -125,6 +123,12 @@ class UnetDecoder(nn.Module):
         self.skip_connections = skip_connections
         if isinstance(self.skip_connections, bool):
             self.skip_connections = [self.skip_connections] * len(skip_channels)
+        assert len(self.skip_connections) == len(skip_channels) - 1,\
+            "Skip connections list should be of length {} but got {}. In PyTorch Segmentation models\
+            we don't have a skip connection at the highest resolution".format(
+                len(skip_channels) - 1, len(self.skip_connections))
+        self.skip_connections = self.skip_connections + [False] # We never have a skip connection at the highest resolution
+        
         # Mask out the skip_channels by the self.skip_connections list
         skip_channels = [skip_channel if self.skip_connections[idx] else 0 for idx, skip_channel in enumerate(skip_channels)]
 
@@ -158,6 +162,7 @@ class UnetDecoder(nn.Module):
         spatial_shapes = spatial_shapes[::-1]
 
         features = features[1:]  # remove first skip with same spatial resolution
+        # Print the feature shapes
         features = features[::-1]  # reverse channels to start from head of encoder
 
         head = features[0]
@@ -165,6 +170,7 @@ class UnetDecoder(nn.Module):
 
         x = self.center(head)
 
+        print("skip connections:", self.skip_connections)
         for i, decoder_block in enumerate(self.blocks):
             # upsample to the next spatial shape
             height, width = spatial_shapes[i + 1]
