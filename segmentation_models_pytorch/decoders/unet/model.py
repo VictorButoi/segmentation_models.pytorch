@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union, Callable, Sequence
+from typing import Any, Optional, Union, Callable, Sequence, List
 
 from segmentation_models_pytorch.base import (
     ClassificationHead,
@@ -94,6 +94,7 @@ class Unet(SegmentationModel):
         self,
         encoder_name: str = "resnet34",
         encoder_depth: int = 5,
+        skip_connections: Union[bool, List[bool]] = True,
         encoder_weights: Optional[str] = "imagenet",
         decoder_use_batchnorm: bool = True,
         decoder_channels: Sequence[int] = (256, 128, 64, 32, 16),
@@ -119,6 +120,7 @@ class Unet(SegmentationModel):
         self.decoder = UnetDecoder(
             encoder_channels=self.encoder.out_channels,
             decoder_channels=decoder_channels,
+            skip_connections=skip_connections,
             n_blocks=encoder_depth,
             use_batchnorm=decoder_use_batchnorm,
             add_center_block=add_center_block,

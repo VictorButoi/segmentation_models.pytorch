@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from typing import Optional, Sequence, List
+from typing import Optional, Sequence, List, Union
 from segmentation_models_pytorch.base import modules as md
 
 
@@ -51,7 +51,9 @@ class UnetDecoderBlock(nn.Module):
             size=(target_height, target_width),
             mode=self.interpolation_mode,
         )
+        print("I hit here!!")
         if skip_connection is not None:
+            print("SHOULD NOT HIT HERE")
             feature_map = torch.cat([feature_map, skip_connection], dim=1)
             feature_map = self.attention1(feature_map)
         feature_map = self.conv1(feature_map)
@@ -92,6 +94,7 @@ class UnetDecoder(nn.Module):
         self,
         encoder_channels: Sequence[int],
         decoder_channels: Sequence[int],
+        skip_connections: Union[bool, List[bool]],
         n_blocks: int = 5,
         use_batchnorm: bool = True,
         attention_type: Optional[str] = None,
@@ -116,6 +119,15 @@ class UnetDecoder(nn.Module):
         head_channels = encoder_channels[0]
         in_channels = [head_channels] + list(decoder_channels[:-1])
         skip_channels = list(encoder_channels[1:]) + [0]
+
+        # If we only define a bool to control the skip connections, then we need to
+        # tile it to the size of the depth.
+        self.skip_connections = skip_connections
+        if isinstance(self.skip_connections, bool):
+            self.skip_connections = [self.skip_connections] * len(skip_channels)
+        # Mask out the skip_channels by the self.skip_connections list
+        skip_channels = [skip_channel if self.skip_connections[idx] else 0 for idx, skip_channel in enumerate(skip_channels)]
+
         out_channels = decoder_channels
 
         if add_center_block:
@@ -156,7 +168,10 @@ class UnetDecoder(nn.Module):
         for i, decoder_block in enumerate(self.blocks):
             # upsample to the next spatial shape
             height, width = spatial_shapes[i + 1]
-            skip_connection = skip_connections[i] if i < len(skip_connections) else None
+            if self.skip_connections[i]:
+                skip_connection = skip_connections[i] if (i < len(skip_connections)) else None
+            else:
+                skip_connection = None
             x = decoder_block(x, height, width, skip_connection=skip_connection)
 
         return x

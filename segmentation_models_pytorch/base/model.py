@@ -64,6 +64,7 @@ class SegmentationModel(torch.nn.Module, SMPHubMixin):
             self.check_input_shape(x)
 
         features = self.encoder(x)
+
         decoder_output = self.decoder(features)
 
         masks = self.segmentation_head(decoder_output)
