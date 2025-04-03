@@ -117,11 +117,10 @@ class Unet(SegmentationModel):
         )
 
         add_center_block = encoder_name.startswith("vgg")
-        reversed_skip_connections = skip_connections[::-1] # By convention, we pass in skip connections backwards.
         self.decoder = UnetDecoder(
             encoder_channels=self.encoder.out_channels,
             decoder_channels=decoder_channels,
-            skip_connections=reversed_skip_connections,
+            skip_connections=skip_connections,
             n_blocks=encoder_depth,
             use_batchnorm=decoder_use_batchnorm,
             add_center_block=add_center_block,

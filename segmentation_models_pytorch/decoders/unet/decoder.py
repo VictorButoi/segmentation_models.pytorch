@@ -120,9 +120,11 @@ class UnetDecoder(nn.Module):
 
         # If we only define a bool to control the skip connections, then we need to
         # tile it to the size of the depth.
-        self.skip_connections = skip_connections
-        if isinstance(self.skip_connections, bool):
-            self.skip_connections = [self.skip_connections] * len(skip_channels)
+        if isinstance(skip_connections, bool):
+            skip_connections = [skip_connections] * (len(skip_channels) - 1)
+        # Finally, reverse the direction of the skip connections to match the encoder
+        # channels.
+        self.skip_connections = skip_connections[::-1]
         assert len(self.skip_connections) == len(skip_channels) - 1,\
             "Skip connections list should be of length {} but got {}. In PyTorch Segmentation models\
             we don't have a skip connection at the highest resolution".format(
@@ -170,7 +172,6 @@ class UnetDecoder(nn.Module):
 
         x = self.center(head)
 
-        print("skip connections:", self.skip_connections)
         for i, decoder_block in enumerate(self.blocks):
             # upsample to the next spatial shape
             height, width = spatial_shapes[i + 1]
